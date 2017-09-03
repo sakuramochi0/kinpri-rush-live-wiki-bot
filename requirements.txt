@@ -1,3 +1,8 @@
+# for kinpri-rush-live-wiki-bot
+pandas
+jinja2
+tabulate
+
 # This is a PIP 6+ requirements file for using Pywikibot and scripts
 #
 # All dependencies can be installed using:
