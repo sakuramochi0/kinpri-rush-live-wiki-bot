@@ -74,6 +74,23 @@ def update_info_important() -> None:
     save_page('お知らせ/重要なお知らせ', page_text)
 
 
+def update_info_normal() -> None:
+
+    # ブロックのテンプレートをfill
+    df = get_sheet('お知らせ/一般')
+    block_template = load_template('お知らせ/一般情報/ブロック')
+    block_text = ''
+    for i, row in reversed(list(df.iterrows())):
+        block_text += render_template(block_template, dict(row)) + '\n\n'
+
+    # テンプレートをfill
+    page_template = load_template('お知らせ/一般情報')
+    page_text = render_template(page_template, {'ブロック': block_text})
+
+    # wiki に書き込み
+    save_page('お知らせ/一般情報', page_text)
+
+
 def load_template(name: str) -> str:
     '''`name` という名前の bot 用テンプレートを wiki から読み込む'''
     return Page(site, 'Template:bot/' + name).text
@@ -96,6 +113,7 @@ def save_page(pagename: str, text: str) -> None:
 
 def main():
     update_info_important()
+    update_info_normal()
 
 
 if __name__ == '__main__':
