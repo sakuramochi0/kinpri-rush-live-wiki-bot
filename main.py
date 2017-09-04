@@ -39,7 +39,7 @@ sheet_ids = {
 
 
 def get_sheet(name: str) -> pd.DataFrame:
-    '''スプレッドシートからシートを読み込む'''
+    '''スプレッドシートからシートを DataFrame として読み込む'''
     url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSWkD1CJvETQFWYfImMvpdGxJPmruNqh7HrCqc2d1FcE2m_hyBMjyOoFkbJFzxXBssgDapfng1IPUBB/pub?gid={sheet_id}&single=true&output=csv'.format(
         sheet_id=get_sheet_id(name),
     )
@@ -52,19 +52,20 @@ def get_sheet(name: str) -> pd.DataFrame:
 
 
 def get_sheet_id(name: str) -> int:
+    '''シート名の一部からスプレッドシート上のシート id を取得する'''
     for sheet_name, sheet_id in sheet_ids.items():
         if name in sheet_name:
             return sheet_id
     return None
 
 def update_info_important() -> None:
-
+    '''「お知らせ/重要なお知らせ」ページを更新する'''
     # ブロックのテンプレートをfill
     df = get_sheet('お知らせ/重要')
     block_template = load_template('お知らせ/重要なお知らせ/ブロック')
     block_text = ''
     for i, row in reversed(list(df.iterrows())):
-        block_text += render_template(block_template, dict(row)) + '\n\n'
+        block_text += render_template(block_template, row) + '\n\n'
 
     # テンプレートをfill
     page_template = load_template('お知らせ/重要なお知らせ')
@@ -75,13 +76,13 @@ def update_info_important() -> None:
 
 
 def update_info_normal() -> None:
-
+    '''「お知らせ/一般情報」ページを更新する'''
     # ブロックのテンプレートをfill
     df = get_sheet('お知らせ/一般')
     block_template = load_template('お知らせ/一般情報/ブロック')
     block_text = ''
     for i, row in reversed(list(df.iterrows())):
-        block_text += render_template(block_template, dict(row)) + '\n\n'
+        block_text += render_template(block_template, row) + '\n\n'
 
     # テンプレートをfill
     page_template = load_template('お知らせ/一般情報')
@@ -91,19 +92,43 @@ def update_info_normal() -> None:
     save_page('お知らせ/一般情報', page_text)
 
 
+def update_profile() -> None:
+    '''「プリズムスタァのプロフィール」ページを更新する'''
+    # ブロックのテンプレートをfill
+    df = get_sheet('プロフィール')
+    block_template = load_template('プリズムスタァのプロフィール/ブロック')
+    block_text = ''
+    for i, row in df.iterrows():
+        block_text += render_template(block_template, row) + '\n\n'
+
+    # テンプレートをfill
+    page_template = load_template('プリズムスタァのプロフィール')
+    page_text = render_template(page_template, {'ブロック': block_text})
+
+    # wiki に書き込み
+    save_page('プリズムスタァのプロフィール', page_text)
+
+
 def load_template(name: str) -> str:
     '''`name` という名前の bot 用テンプレートを wiki から読み込む'''
     return Page(site, 'Template:bot/' + name).text
 
 
-def render_template(template: str, data: Dict) -> str:
+def render_template(template: str, data: any) -> str:
+    '''wiki から取得したテンプレートにスプレッドシートのデータを流し込む'''
+    if type(data) is not dict:
+        data = dict(data)
     return Template(template).render(data)
 
 
 def save_page(pagename: str, text: str) -> None:
-    page = Page(site, pagename)
+    '''実際に wiki のページを書き込む'''
+
+    # Bot 編集ページであることを知らせるフッターを付加して更新する
+    text += '\n\n{{bot/編集の注意}}'
 
     # ページに変更がない場合には何もしない
+    page = Page(site, pagename)
     if page.text == text:
         return
 
@@ -114,6 +139,7 @@ def save_page(pagename: str, text: str) -> None:
 def main():
     update_info_important()
     update_info_normal()
+    update_profile()
 
 
 if __name__ == '__main__':
