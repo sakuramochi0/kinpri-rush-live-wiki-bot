@@ -67,58 +67,67 @@ def get_sheet_id(name: str) -> int:
             return sheet_id
     return None
 
+
+def update_wiki(sheet_name, page_name, page_data_factory):
+    '''Wiki の各ページを更新するための高階関数'''
+    data = page_data_factory(sheet_name)
+    page_template = load_template(page_name)
+    page_text = render_template(page_template, data)
+    save_page(page_name, page_text, sheet_name)
+
+
 def update_info_important() -> None:
     '''「お知らせ/重要なお知らせ」ページを更新する'''
-    # ブロックのテンプレートをfill
-    sheet_name = 'お知らせ/重要'
-    df = get_sheet(sheet_name)
-    block_template = load_template('お知らせ/重要なお知らせ/ブロック')
-    block_text = ''
-    for i, row in reversed(list(df.iterrows())):
-        block_text += render_template(block_template, row) + '\n\n'
 
-    # テンプレートをfill
-    page_template = load_template('お知らせ/重要なお知らせ')
-    page_text = render_template(page_template, {'ブロック': block_text})
+    def data_factory(sheet_name):
+        df = get_sheet(sheet_name)
+        block_template = load_template('お知らせ/重要なお知らせ/ブロック')
+        block_text = ''
+        for i, row in reversed(list(df.iterrows())):
+            block_text += render_template(block_template, row) + '\n\n'
+        return {'ブロック': block_text}
 
-    # wiki に書き込み
-    save_page('お知らせ/重要なお知らせ', page_text, sheet_name)
+    update_wiki(
+        sheet_name='お知らせ/重要',
+        page_name='お知らせ/重要なお知らせ',
+        page_data_factory=data_factory
+    )
 
 
 def update_info_normal() -> None:
     '''「お知らせ/一般情報」ページを更新する'''
-    # ブロックのテンプレートをfill
-    sheet_name = 'お知らせ/一般'
-    df = get_sheet(sheet_name)
-    block_template = load_template('お知らせ/一般情報/ブロック')
-    block_text = ''
-    for i, row in reversed(list(df.iterrows())):
-        block_text += render_template(block_template, row) + '\n\n'
 
-    # テンプレートをfill
-    page_template = load_template('お知らせ/一般情報')
-    page_text = render_template(page_template, {'ブロック': block_text})
+    def data_factory(sheet_name):
+        df = get_sheet(sheet_name)
+        block_template = load_template('お知らせ/一般情報/ブロック')
+        block_text = ''
+        for i, row in reversed(list(df.iterrows())):
+            block_text += render_template(block_template, row) + '\n\n'
+        return {'ブロック': block_text}
 
-    # wiki に書き込み
-    save_page('お知らせ/一般情報', page_text, sheet_name)
+    update_wiki(
+        sheet_name='お知らせ/一般',
+        page_name='お知らせ/一般情報',
+        page_data_factory=data_factory
+    )
 
 
 def update_profile() -> None:
     '''「プリズムスタァのプロフィール」ページを更新する'''
-    # ブロックのテンプレートをfill
-    sheet_name = 'プロフィール'
-    df = get_sheet(sheet_name)
-    block_template = load_template('プリズムスタァのプロフィール/ブロック')
-    block_text = ''
-    for i, row in df.iterrows():
-        block_text += render_template(block_template, row) + '\n\n'
 
-    # テンプレートをfill
-    page_template = load_template('プリズムスタァのプロフィール')
-    page_text = render_template(page_template, {'ブロック': block_text})
+    def data_factory(sheet_name):
+        df = get_sheet(sheet_name)
+        block_template = load_template('プリズムスタァのプロフィール/ブロック')
+        block_text = ''
+        for i, row in df.iterrows():
+            block_text += render_template(block_template, row) + '\n\n'
+        return {'ブロック': block_text}
 
-    # wiki に書き込み
-    save_page('プリズムスタァのプロフィール', page_text, sheet_name)
+    update_wiki(
+        sheet_name='プロフィール',
+        page_name='プリズムスタァのプロフィール',
+        page_data_factory=data_factory
+    )
 
 
 def load_template(name: str) -> str:
