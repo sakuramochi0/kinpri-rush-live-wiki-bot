@@ -9,6 +9,7 @@ from mypy.types import Dict
 
 
 site = Site()
+
 sheet_ids = {
     "📺 シナリオ一覧": 788224352,
     "🎉 イベント": 195852940,
@@ -40,15 +41,23 @@ sheet_ids = {
 
 def get_sheet(name: str) -> pd.DataFrame:
     '''スプレッドシートからシートを DataFrame として読み込む'''
-    url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSWkD1CJvETQFWYfImMvpdGxJPmruNqh7HrCqc2d1FcE2m_hyBMjyOoFkbJFzxXBssgDapfng1IPUBB/pub?gid={sheet_id}&single=true&output=csv'.format(
-        sheet_id=get_sheet_id(name),
-    )
+    url = get_sheet_csv_url(name)
     r = requests.get(url)
     r.encoding = 'utf-8'
 
     # バージョンがないセルは '-' で埋める
     df = pd.read_csv(io.StringIO(r.text)).fillna('-')
     return df
+
+
+def get_sheet_csv_url(name: str) -> str:
+    url_base = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSWkD1CJvETQFWYfImMvpdGxJPmruNqh7HrCqc2d1FcE2m_hyBMjyOoFkbJFzxXBssgDapfng1IPUBB/pub?gid={sheet_id}&single=true&output=csv'
+    return url_base.format(sheet_id=get_sheet_id(name))
+
+
+def get_sheet_url(name: str) -> str:
+    url_base = 'https://docs.google.com/spreadsheets/d/1of3ywHK2tUp2Q12x8Dh6CWHvh6RmNiigOvvYrZWayC4/edit#gid={sheet_id}'
+    return url_base.format(sheet_id=get_sheet_id(name))
 
 
 def get_sheet_id(name: str) -> int:
@@ -61,7 +70,8 @@ def get_sheet_id(name: str) -> int:
 def update_info_important() -> None:
     '''「お知らせ/重要なお知らせ」ページを更新する'''
     # ブロックのテンプレートをfill
-    df = get_sheet('お知らせ/重要')
+    sheet_name = 'お知らせ/重要'
+    df = get_sheet(sheet_name)
     block_template = load_template('お知らせ/重要なお知らせ/ブロック')
     block_text = ''
     for i, row in reversed(list(df.iterrows())):
@@ -72,13 +82,14 @@ def update_info_important() -> None:
     page_text = render_template(page_template, {'ブロック': block_text})
 
     # wiki に書き込み
-    save_page('お知らせ/重要なお知らせ', page_text)
+    save_page('お知らせ/重要なお知らせ', page_text, sheet_name)
 
 
 def update_info_normal() -> None:
     '''「お知らせ/一般情報」ページを更新する'''
     # ブロックのテンプレートをfill
-    df = get_sheet('お知らせ/一般')
+    sheet_name = 'お知らせ/一般'
+    df = get_sheet(sheet_name)
     block_template = load_template('お知らせ/一般情報/ブロック')
     block_text = ''
     for i, row in reversed(list(df.iterrows())):
@@ -89,13 +100,14 @@ def update_info_normal() -> None:
     page_text = render_template(page_template, {'ブロック': block_text})
 
     # wiki に書き込み
-    save_page('お知らせ/一般情報', page_text)
+    save_page('お知らせ/一般情報', page_text, sheet_name)
 
 
 def update_profile() -> None:
     '''「プリズムスタァのプロフィール」ページを更新する'''
     # ブロックのテンプレートをfill
-    df = get_sheet('プロフィール')
+    sheet_name = 'プロフィール'
+    df = get_sheet(sheet_name)
     block_template = load_template('プリズムスタァのプロフィール/ブロック')
     block_text = ''
     for i, row in df.iterrows():
@@ -106,7 +118,7 @@ def update_profile() -> None:
     page_text = render_template(page_template, {'ブロック': block_text})
 
     # wiki に書き込み
-    save_page('プリズムスタァのプロフィール', page_text)
+    save_page('プリズムスタァのプロフィール', page_text, sheet_name)
 
 
 def load_template(name: str) -> str:
@@ -121,11 +133,13 @@ def render_template(template: str, data: any) -> str:
     return Template(template).render(data)
 
 
-def save_page(pagename: str, text: str) -> None:
+def save_page(pagename: str, text: str, sheet_name: str) -> None:
     '''実際に wiki のページを書き込む'''
 
     # Bot 編集ページであることを知らせるフッターを付加して更新する
-    text += '\n\n{{bot/編集の注意}}'
+    sheet_url = get_sheet_url(sheet_name)
+    footer = '\n\n{{bot/編集の注意|url = %s}}' % sheet_url
+    text += footer
 
     # ページに変更がない場合には何もしない
     page = Page(site, pagename)
