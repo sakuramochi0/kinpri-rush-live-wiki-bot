@@ -40,12 +40,12 @@ sheet_ids = {
 }
 
 
-def get_sheet(name: str) -> pd.DataFrame:
+def get_sheet(name: str, **kargs) -> pd.DataFrame:
     '''スプレッドシートからシートを DataFrame として読み込む'''
     url = get_sheet_csv_url(name)
     r = requests.get(url)
     r.encoding = 'utf-8'
-    df = pd.read_csv(io.StringIO(r.text))
+    df = pd.read_csv(io.StringIO(r.text), **kargs)
     return df
 
 
@@ -111,7 +111,6 @@ def cheering_goods_data_factory(sheet_name):
     # アイコン画像用列を追加
     df['アイコン'] = '[[File:アイテム ' + df['レア'] + ' ' + df['ブロマイド名'] + \
                      '.png|48x48px|' + df['ブロマイド名'] + ']]'
-    template = load_template('応援グッズ')
     goods_list_cols = ['アイコン', 'ブロマイド名', 'レア', 'タイプ']
     way_to_get_cols = ['アイコン', 'ブロマイド名', '楽曲ドロップ', '難易度', 'その他の入手方法']
     goods_list = tabulate(df[goods_list_cols],
@@ -119,6 +118,19 @@ def cheering_goods_data_factory(sheet_name):
     way_to_get = tabulate(df[way_to_get_cols],
                           tablefmt='wikia', headers='keys', showindex=False)
     return {'応援グッズ一覧': goods_list, '入手方法': way_to_get}
+
+
+def fan_level_data_factory(sheet_name):
+    '''「ファンレベル」ぺーじの wiki を生成する'''
+    # まだデータが存在しないレベルの行を取り除く
+    df = get_sheet(sheet_name, index_col='ファンレベル').dropna(axis=0, how='all')
+    parameter_cols = ['レベルアップに必要な経験値', 'Δ',
+                      'キャパ', 'Δ.1', 'スタミナ', 'Δ.2', 'フレンド枠', 'Δ.3']
+    story_cols = ['解放ストーリー', '話数']
+    parameter_table = tabulate(
+        df[parameter_cols], tablefmt='wikia', headers='keys')
+    story_table = tabulate(df[story_cols], tablefmt='wikia', headers='keys')
+    return {'必要経験値と増加パラメータ': parameter_table, '解放ストーリー': story_table}
 
 
 def load_template(name: str) -> str:
@@ -170,6 +182,10 @@ def main(args):
         sheet_name='応援グッズ',
         page_name='応援グッズ',
         page_data_factory=cheering_goods_data_factory)
+    update_wiki(
+        sheet_name='ファンレベル',
+        page_name='ファンレベル',
+        page_data_factory=fan_level_data_factory)
 
 
 if __name__ == '__main__':
