@@ -74,84 +74,50 @@ def update_wiki(sheet_name, page_name, page_data_factory):
     save_page(page_name, page_text, sheet_name)
 
 
-def update_info_important() -> None:
-    '''「お知らせ/重要なお知らせ」ページを更新する'''
-
-    def data_factory(sheet_name):
-        df = get_sheet(sheet_name).fillna('-') # バージョンがないセルは '-' で埋める
-        block_template = load_template('お知らせ/重要なお知らせ/ブロック')
-        block_text = ''
-        for i, row in reversed(list(df.iterrows())):
-            block_text += render_template(block_template, row) + '\n\n'
-        return {'ブロック': block_text}
-
-    update_wiki(
-        sheet_name='お知らせ/重要',
-        page_name='お知らせ/重要なお知らせ',
-        page_data_factory=data_factory
-    )
+def info_important_data_factory(sheet_name):
+    '''「お知らせ/重要なお知らせ」ページの wiki を生成する'''
+    df = get_sheet(sheet_name).fillna('-') # バージョンがないセルは '-' で埋める
+    block_template = load_template('お知らせ/重要なお知らせ/ブロック')
+    block_text = ''
+    for i, row in reversed(list(df.iterrows())):
+        block_text += render_template(block_template, row) + '\n\n'
+    return {'ブロック': block_text}
 
 
-def update_info_normal() -> None:
-    '''「お知らせ/一般情報」ページを更新する'''
-
-    def data_factory(sheet_name):
-        df = get_sheet(sheet_name)
-        block_template = load_template('お知らせ/一般情報/ブロック')
-        block_text = ''
-        for i, row in reversed(list(df.iterrows())):
-            block_text += render_template(block_template, row) + '\n\n'
-        return {'ブロック': block_text}
-
-    update_wiki(
-        sheet_name='お知らせ/一般',
-        page_name='お知らせ/一般情報',
-        page_data_factory=data_factory
-    )
+def info_normal_data_factory(sheet_name):
+    '''「お知らせ/一般情報」ページの wiki を生成する'''
+    df = get_sheet(sheet_name)
+    block_template = load_template('お知らせ/一般情報/ブロック')
+    block_text = ''
+    for i, row in reversed(list(df.iterrows())):
+        block_text += render_template(block_template, row) + '\n\n'
+    return {'ブロック': block_text}
 
 
-def update_profile() -> None:
-    '''「プリズムスタァのプロフィール」ページを更新する'''
-
-    def data_factory(sheet_name):
-        df = get_sheet(sheet_name)
-        block_template = load_template('プリズムスタァのプロフィール/ブロック')
-        block_text = ''
-        for i, row in df.iterrows():
-            block_text += render_template(block_template, row) + '\n\n'
-        return {'ブロック': block_text}
-
-    update_wiki(
-        sheet_name='プロフィール',
-        page_name='プリズムスタァのプロフィール',
-        page_data_factory=data_factory
-    )
+def profile_data_factory(sheet_name):
+    '''「プリズムスタァのプロフィール」ページの wiki を生成する'''
+    df = get_sheet(sheet_name)
+    block_template = load_template('プリズムスタァのプロフィール/ブロック')
+    block_text = ''
+    for i, row in df.iterrows():
+        block_text += render_template(block_template, row) + '\n\n'
+    return {'ブロック': block_text}
 
 
-def update_cheering_goods() -> None:
-    '''「応援グッズ」ページを更新する'''
-
-    def data_factory(sheet_name):
-        df = get_sheet(sheet_name)
-
-        # アイコン画像用列を追加
-        df['アイコン'] = '[[File:アイテム ' + df['レア'] + ' ' + df['ブロマイド名'] + \
-                         '.png|48x48px|' + df['ブロマイド名'] + ']]'
-
-        template = load_template('応援グッズ')
-        goods_list_cols = ['アイコン', 'ブロマイド名', 'レア', 'タイプ']
-        way_to_get_cols = ['アイコン', 'ブロマイド名', '楽曲ドロップ', '難易度', 'その他の入手方法']
-        goods_list = tabulate(df[goods_list_cols],
-                              tablefmt='wikia', headers='keys', showindex=False)
-        way_to_get = tabulate(df[way_to_get_cols],
-                              tablefmt='wikia', headers='keys', showindex=False)
-        return {'応援グッズ一覧': goods_list, '入手方法': way_to_get}
-
-    update_wiki(
-        sheet_name='応援グッズ',
-        page_name='応援グッズ',
-        page_data_factory=data_factory
-    )
+def cheering_goods_data_factory(sheet_name):
+    '''「応援グッズ」ページの wiki を生成する'''
+    df = get_sheet(sheet_name)
+    # アイコン画像用列を追加
+    df['アイコン'] = '[[File:アイテム ' + df['レア'] + ' ' + df['ブロマイド名'] + \
+                     '.png|48x48px|' + df['ブロマイド名'] + ']]'
+    template = load_template('応援グッズ')
+    goods_list_cols = ['アイコン', 'ブロマイド名', 'レア', 'タイプ']
+    way_to_get_cols = ['アイコン', 'ブロマイド名', '楽曲ドロップ', '難易度', 'その他の入手方法']
+    goods_list = tabulate(df[goods_list_cols],
+                          tablefmt='wikia', headers='keys', showindex=False)
+    way_to_get = tabulate(df[way_to_get_cols],
+                          tablefmt='wikia', headers='keys', showindex=False)
+    return {'応援グッズ一覧': goods_list, '入手方法': way_to_get}
 
 
 def load_template(name: str) -> str:
@@ -184,10 +150,25 @@ def save_page(pagename: str, text: str, sheet_name: str) -> None:
 
 
 def main():
-    update_info_important()
-    update_info_normal()
-    update_profile()
-    update_cheering_goods()
+    update_wiki(
+        sheet_name='お知らせ/重要',
+        page_name='お知らせ/重要なお知らせ',
+        page_data_factory=info_important_data_factory)
+
+    update_wiki(
+        sheet_name='お知らせ/一般',
+        page_name='お知らせ/一般情報',
+        page_data_factory=info_normal_data_factory)
+
+    update_wiki(
+        sheet_name='プロフィール',
+        page_name='プリズムスタァのプロフィール',
+        page_data_factory=profile_data_factory)
+
+    update_wiki(
+        sheet_name='応援グッズ',
+        page_name='応援グッズ',
+        page_data_factory=cheering_goods_data_factory)
 
 
 if __name__ == '__main__':
