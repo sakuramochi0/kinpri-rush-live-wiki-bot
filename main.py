@@ -44,9 +44,7 @@ def get_sheet(name: str) -> pd.DataFrame:
     url = get_sheet_csv_url(name)
     r = requests.get(url)
     r.encoding = 'utf-8'
-
-    # バージョンがないセルは '-' で埋める
-    df = pd.read_csv(io.StringIO(r.text)).fillna('-')
+    df = pd.read_csv(io.StringIO(r.text))
     return df
 
 
@@ -80,7 +78,7 @@ def update_info_important() -> None:
     '''「お知らせ/重要なお知らせ」ページを更新する'''
 
     def data_factory(sheet_name):
-        df = get_sheet(sheet_name)
+        df = get_sheet(sheet_name).fillna('-') # バージョンがないセルは '-' で埋める
         block_template = load_template('お知らせ/重要なお知らせ/ブロック')
         block_text = ''
         for i, row in reversed(list(df.iterrows())):
@@ -130,6 +128,32 @@ def update_profile() -> None:
     )
 
 
+def update_cheering_goods() -> None:
+    '''「応援グッズ」ページを更新する'''
+
+    def data_factory(sheet_name):
+        df = get_sheet(sheet_name)
+
+        # アイコン画像用列を追加
+        df['アイコン'] = '[[File:アイテム ' + df['レア'] + ' ' + df['ブロマイド名'] + \
+                         '.png|48x48px|' + df['ブロマイド名'] + ']]'
+
+        template = load_template('応援グッズ')
+        goods_list_cols = ['アイコン', 'ブロマイド名', 'レア', 'タイプ']
+        way_to_get_cols = ['アイコン', 'ブロマイド名', '楽曲ドロップ', '難易度', 'その他の入手方法']
+        goods_list = tabulate(df[goods_list_cols],
+                              tablefmt='wikia', headers='keys', showindex=False)
+        way_to_get = tabulate(df[way_to_get_cols],
+                              tablefmt='wikia', headers='keys', showindex=False)
+        return {'応援グッズ一覧': goods_list, '入手方法': way_to_get}
+
+    update_wiki(
+        sheet_name='応援グッズ',
+        page_name='応援グッズ',
+        page_data_factory=data_factory
+    )
+
+
 def load_template(name: str) -> str:
     '''`name` という名前の bot 用テンプレートを wiki から読み込む'''
     return Page(site, 'Template:bot/' + name).text
@@ -163,6 +187,7 @@ def main():
     update_info_important()
     update_info_normal()
     update_profile()
+    update_cheering_goods()
 
 
 if __name__ == '__main__':
