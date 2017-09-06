@@ -1,3 +1,4 @@
+import argparse
 from pywikibot import Site, Page
 from bs4 import BeautifulSoup
 import requests
@@ -146,25 +147,25 @@ def save_page(pagename: str, text: str, sheet_name: str) -> None:
         return
 
     page.text = text
-    page.save()
+    if args.debug:
+        print(page.text)
+    else:
+        page.save()
 
 
-def main():
+def main(args):
     update_wiki(
         sheet_name='お知らせ/重要',
         page_name='お知らせ/重要なお知らせ',
         page_data_factory=info_important_data_factory)
-
     update_wiki(
         sheet_name='お知らせ/一般',
         page_name='お知らせ/一般情報',
         page_data_factory=info_normal_data_factory)
-
     update_wiki(
         sheet_name='プロフィール',
         page_name='プリズムスタァのプロフィール',
         page_data_factory=profile_data_factory)
-
     update_wiki(
         sheet_name='応援グッズ',
         page_name='応援グッズ',
@@ -172,4 +173,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+                        help='デバッグモードで実行する')
+    args = parser.parse_args()
+    main(args)
