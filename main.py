@@ -23,7 +23,7 @@ sheet_ids = {
     "合体ジャンプ": 1223304644,
     "🎶 楽曲リスト": 1572242050,
     "🎫 Prismチケット入手条件": 451938944,
-    "ブロマイト(PPガチャ)": 951128679,
+    "ブロマイド(PPガチャ)": 951128679,
     "📕 応援グッズ": 1833623005,
     "🎁 日替わりプレゼント": 1247915676,
     "⛸️ 練習経験値": 2109961420,
@@ -70,38 +70,34 @@ def get_sheet_id(name: str) -> int:
 def update_wiki(sheet_name, page_name, page_data_factory):
     '''Wiki の各ページを更新するための高階関数'''
     data = page_data_factory(sheet_name)
-    page_template = load_template(page_name)
-    page_text = render_template(page_template, data)
+    page_text = render_template(page_name, data)
     save_page(page_name, page_text, sheet_name)
 
 
 def info_important_data_factory(sheet_name):
     '''「お知らせ/重要なお知らせ」ページの wiki を生成する'''
     df = get_sheet(sheet_name).fillna('-') # バージョンがないセルは '-' で埋める
-    block_template = load_template('お知らせ/重要なお知らせ/ブロック')
     block_text = ''
     for i, row in reversed(list(df.iterrows())):
-        block_text += render_template(block_template, row) + '\n\n'
+        block_text += render_template('お知らせ/重要なお知らせ/ブロック', row) + '\n\n'
     return {'ブロック': block_text}
 
 
 def info_normal_data_factory(sheet_name):
     '''「お知らせ/一般情報」ページの wiki を生成する'''
     df = get_sheet(sheet_name)
-    block_template = load_template('お知らせ/一般情報/ブロック')
     block_text = ''
     for i, row in reversed(list(df.iterrows())):
-        block_text += render_template(block_template, row) + '\n\n'
+        block_text += render_template('お知らせ/一般情報/ブロック', row) + '\n\n'
     return {'ブロック': block_text}
 
 
 def profile_data_factory(sheet_name):
     '''「プリズムスタァのプロフィール」ページの wiki を生成する'''
     df = get_sheet(sheet_name)
-    block_template = load_template('プリズムスタァのプロフィール/ブロック')
     block_text = ''
     for i, row in df.iterrows():
-        block_text += render_template(block_template, row) + '\n\n'
+        block_text += render_template('プリズムスタァのプロフィール/ブロック', row) + '\n\n'
     return {'ブロック': block_text}
 
 
@@ -121,7 +117,7 @@ def cheering_goods_data_factory(sheet_name):
 
 
 def fan_level_data_factory(sheet_name):
-    '''「ファンレベル」ぺーじの wiki を生成する'''
+    '''「ファンレベル」ページの wiki を生成する'''
     # まだデータが存在しないレベルの行を取り除く
     df = get_sheet(sheet_name, index_col='ファンレベル').dropna(axis=0, how='all')
     parameter_cols = ['レベルアップに必要な経験値', 'Δ',
@@ -133,13 +129,31 @@ def fan_level_data_factory(sheet_name):
     return {'必要経験値と増加パラメータ': parameter_table, '解放ストーリー': story_table}
 
 
+def tutorial_bromide_data_factory(sheet_name):
+    '''「チュートリアルでもらえるブロマイド」ページの wiki を生成する'''
+    df = get_sheet(sheet_name)
+    block_text = ''
+    for i, row in df.iterrows():
+        block_text += render_template('チュートリアルでもらえるブロマイド/ブロック', row) + '\n\n'
+    return {'ブロック': block_text}
+
+
+def prism_point_gacha_bromide_data_factory(sheet_name):
+    '''「Pポイントガチャで入手できるブロマイド」ページの wiki を生成する'''
+    df = get_sheet(sheet_name).fillna('不明')
+    df = df.replace('1', '○').replace('0', '×')
+    table = tabulate(df, tablefmt='wikia', showindex=False, headers='keys')
+    return {'テーブル': table}
+
+
 def load_template(name: str) -> str:
     '''`name` という名前の bot 用テンプレートを wiki から読み込む'''
     return Page(site, 'Template:bot/' + name).text
 
 
-def render_template(template: str, data: any) -> str:
+def render_template(page_name: str, data: any) -> str:
     '''wiki から取得したテンプレートにスプレッドシートのデータを流し込む'''
+    template = load_template(page_name)
     if type(data) is not dict:
         data = dict(data)
     return Template(template).render(data)
@@ -186,6 +200,14 @@ def main(args):
         sheet_name='ファンレベル',
         page_name='ファンレベル',
         page_data_factory=fan_level_data_factory)
+    update_wiki(
+        sheet_name='チュートリアル',
+        page_name='チュートリアルでもらえるブロマイド',
+        page_data_factory=tutorial_bromide_data_factory)
+    update_wiki(
+        sheet_name='ブロマイド(PPガチャ)',
+        page_name='Pポイントガチャで入手できるブロマイド',
+        page_data_factory=prism_point_gacha_bromide_data_factory)
 
 
 if __name__ == '__main__':
