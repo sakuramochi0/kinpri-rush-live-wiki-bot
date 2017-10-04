@@ -5,6 +5,7 @@ import requests
 from tabulate import tabulate
 from jinja2 import Template
 import pandas as pd
+import numpy as np
 import io
 from mypy.types import Dict
 
@@ -46,6 +47,8 @@ def get_sheet(name: str, **kargs) -> pd.DataFrame:
     r = requests.get(url)
     r.encoding = 'utf-8'
     df = pd.read_csv(io.StringIO(r.text), **kargs)
+    df = df.rename(
+        columns=lambda x: x.replace('\n', '').replace('.', '')) # 列名の改行を除去
     return df
 
 
@@ -67,11 +70,15 @@ def get_sheet_id(name: str) -> int:
     return None
 
 
-def update_wiki(sheet_name, page_name, page_data_factory):
+def update_wiki(sheet_name, page_name,
+                template_name=None, page_data_factory=None, data=None):
     '''Wiki の各ページを更新するための高階関数'''
-    data = page_data_factory(sheet_name)
-    page_text = render_template(page_name, data)
-    save_page(page_name, page_text, sheet_name)
+    if data is None:
+        data = page_data_factory(sheet_name)
+    if template_name is None:
+        template_name = page_name
+    page_text = render_template(template_name, data)
+    save_page(page_name, page_text, sheet_name, template_name)
 
 
 def info_important_data_factory(sheet_name):
@@ -119,9 +126,9 @@ def cheering_goods_data_factory(sheet_name):
 def fan_level_data_factory(sheet_name):
     '''「ファンレベル」ページの wiki を生成する'''
     # まだデータが存在しないレベルの行を取り除く
-    df = get_sheet(sheet_name, index_col='ファンレベル').dropna(axis=0, how='all')
+    df = get_sheet(sheet_name, index_col='ファンレベル').dropna(axis=0, how='all').fillna('')
     parameter_cols = ['レベルアップに必要な経験値', 'Δ',
-                      'キャパ', 'Δ.1', 'スタミナ', 'Δ.2', 'フレンド枠', 'Δ.3']
+                      'キャパ', 'Δ1', 'スタミナ', 'Δ2', 'フレンド枠', 'Δ3']
     story_cols = ['解放ストーリー', '話数']
     parameter_table = tabulate(
         df[parameter_cols], tablefmt='wikia', headers='keys')
@@ -146,6 +153,33 @@ def prism_point_gacha_bromide_data_factory(sheet_name):
     return {'テーブル': table}
 
 
+def update_bromide():
+    def to_int(i):
+        if type(i) is float:
+            return int(i)
+        else:
+            return i
+
+    df = get_sheet('🎴 ブロマイド', skiprows=1)
+
+    # jinja2 の変数名のために調整
+    df.loc[:, 'first'] = df['1st']
+    df.loc[:, 'second'] = df['2nd']
+    df.loc[:, 'third'] = df['3rd']
+    df.loc[:, 'チェンジ後最大ランク'] = df['最大ランク1']
+
+    for i, bromide in df.iterrows():
+        page_name = '{}{}{}'.format(
+            bromide['レア'], bromide['ブロマイド名'], bromide['キャラクター名'])
+        bromide = {k: to_int(v) for k,v in bromide.fillna('').to_dict().items()}
+        update_wiki(
+            sheet_name='🎴 ブロマイド',
+            page_name=page_name,
+            template_name='ブロマイド',
+            page_data_factory=None,
+            data=bromide)
+
+
 def load_template(name: str) -> str:
     '''`name` という名前の bot 用テンプレートを wiki から読み込む'''
     return Page(site, 'Template:bot/' + name).text
@@ -159,16 +193,20 @@ def render_template(page_name: str, data: any) -> str:
     return Template(template).render(data)
 
 
-def save_page(pagename: str, text: str, sheet_name: str) -> None:
+def save_page(page_name: str, text: str, sheet_name: str,
+              template_name: str) -> None:
     '''実際に wiki のページを書き込む'''
+    if template_name is None:
+        template_name = page_name
 
     # Bot 編集ページであることを知らせるフッターを付加して更新する
     sheet_url = get_sheet_url(sheet_name)
-    footer = '\n\n{{bot/編集の注意|url = %s}}' % sheet_url
+    footer = '\n\n{{bot/編集の注意|template_name = %s | url = %s}}' \
+                                              % (template_name, sheet_url)
     text += footer
 
     # ページに変更がない場合には何もしない
-    page = Page(site, pagename)
+    page = Page(site, page_name)
     if page.text == text:
         return
 
@@ -208,6 +246,7 @@ def main(args):
         sheet_name='ブロマイド(PPガチャ)',
         page_name='Pポイントガチャで入手できるブロマイド',
         page_data_factory=prism_point_gacha_bromide_data_factory)
+    update_bromide()
 
 
 if __name__ == '__main__':
