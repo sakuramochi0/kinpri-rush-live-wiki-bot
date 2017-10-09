@@ -40,6 +40,8 @@ sheet_ids = {
     "お知らせ/重要": 1834106149,
 }
 
+colors = ['紫', '藍', '青', '緑', '黄', '橙', '赤']
+
 
 def get_sheet(name: str, **kargs) -> pd.DataFrame:
     '''スプレッドシートからシートを DataFrame として読み込む'''
@@ -180,6 +182,27 @@ def update_bromide():
             data=bromide)
 
 
+def update_item_prism():
+    '''3種類のプリズムを入手できる楽曲・報酬のリストページを更新する'''
+    df = get_sheet('楽曲リスト',header=1)
+    for prism_name in ['瞬きプリズム', '煌めきプリズム', '輝きプリズム']:
+        for color in colors:
+            prism = df[df[prism_name].str.contains(color ,na=False)]
+            prism = prism[['楽曲グループ', '楽曲名', '難易度', prism_name]]
+            table_text = tabulate(prism, tablefmt='wikia',
+                                  headers=prism.keys(), showindex=False)
+            page_name = '{}({})'.format(prism_name, color)
+            data = {
+                'アイテム名': page_name,
+                '楽曲一覧': table_text,
+            }
+            update_wiki(
+                sheet_name='楽曲リスト',
+                page_name=page_name,
+                template_name='プリズム',
+                data=data)
+
+
 def load_template(name: str) -> str:
     '''`name` という名前の bot 用テンプレートを wiki から読み込む'''
     return Page(site, 'Template:bot/' + name).text
@@ -247,6 +270,7 @@ def main(args):
         page_name='Pポイントガチャで入手できるブロマイド',
         page_data_factory=prism_point_gacha_bromide_data_factory)
     update_bromide()
+    update_item_prism()
 
 
 if __name__ == '__main__':
