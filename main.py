@@ -183,18 +183,27 @@ def update_bromide():
 
 
 def update_item_prism():
-    '''3種類のプリズムを入手できる楽曲・報酬のリストページを更新する'''
-    df = get_sheet('楽曲リスト',header=1)
+    '''3種類のプリズムの各ページを更新する'''
+    df = get_sheet('楽曲リスト', header=1)
+    bromide_df = get_sheet('ブロマイド', header=1)
     for prism_name in ['瞬きプリズム', '煌めきプリズム', '輝きプリズム']:
         for color in colors:
-            prism = df[df[prism_name].str.contains(color ,na=False)]
+            # 楽曲リストを求める
+            prism = df[df[prism_name].str.contains(color, na=False)]
             prism = prism[['楽曲グループ', '楽曲名', '難易度', prism_name]]
-            table_text = tabulate(prism, tablefmt='wikia',
+            songs_table_text = tabulate(prism, tablefmt='wikia',
                                   headers=prism.keys(), showindex=False)
+            # プリズムを必要としているスタァを求める
+            stars = bromide_df[bromide_df[prism_name] == color]
+            stars = stars['レア'] + stars['ブロマイド名'] + stars['キャラクター名']
+            stars = ['* [[{}]]'.format(star) for _, star in stars.items()]
+            stars_list_text = '\n'.join(stars)
+
             page_name = '{}({})'.format(prism_name, color)
             data = {
                 'アイテム名': page_name,
-                '楽曲一覧': table_text,
+                '楽曲一覧': songs_table_text,
+                'スタァ一覧': stars_list_text,
             }
             update_wiki(
                 sheet_name='楽曲リスト',
