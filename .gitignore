@@ -106,7 +106,6 @@ ENV/
 # pywikibot
 throttle.ctrl
 pywikibot.lwp
-user-*.py
 *.bak
 *.pyc
 *.pyo
